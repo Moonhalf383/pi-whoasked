@@ -5,7 +5,7 @@
   "type": "module",
   "keywords": ["pi-package", "pi-extension"],
   "license": "MIT",
-  "files": ["src", "whoasked.example.json", "README.md", "README.zh-CN.md"],
+  "files": ["src", "configs", "whoasked.example.json", "README.md", "README.zh-CN.md"],
   "pi": { "extensions": ["./src/index.ts"] },
   "engines": { "node": ">=22.19.0" },
   "peerDependencies": { "@earendil-works/pi-coding-agent": ">=1.4.0" },

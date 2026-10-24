@@ -71,6 +71,18 @@ Rules are checked in configuration order; the first matching rule in a snapshot 
 
 The example file also includes a disabled “not A but B” rule for Chinese text. That construction often has a legitimate use, so narrow the pattern before enabling it.
 
+For more aggressive Chinese-language filtering, use [configs/zh-CN.strict.json](configs/zh-CN.strict.json):
+
+```bash
+pi -e ./src/index.ts --whoasked-config ./configs/zh-CN.strict.json
+```
+
+This preset has eight groups with separate correction prompts: phantom contrasts, unsupported accusations of repackaging or exaggeration, defensive evidence qualifiers, replacement disclaimers, exclusive causality, unsolicited action exclusions, hypothetical implications, and a broad negation fallback. It covers phrases such as `而不是`, `不是…而是`, `不把`, `不能替代`, `不据此`, `不宣称`, `不预设`, `不得声称`, `重新包装`, `扩张为`, `唯一原因`, `重新发明`, `尚不能`, `不应继续`, `不能`, `不得`, `不进入`, `不参与`, and `不再`, plus variants such as `这不意味着`, `这不代表`, and `不等于`.
+
+This is aggressive lexical filtering: ordinary statements containing `不能` or `不得` will also trigger it. Specific rules precede fallback rules, but if a streaming chunk ends at `不能`, the fallback triggers immediately without waiting for the rest. Correction prompts preserve facts, necessary limitations, and important risks while asking for more direct wording.
+
+To use it across projects, copy it to `~/.pi/agent/whoasked.json` (back up any existing file), then run `/whoasked reload`. An explicitly selected configuration or a trusted project's configuration can override it.
+
 ## Example
 
 ```text
