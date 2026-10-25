@@ -1,6 +1,8 @@
-# pi-whoasked
+# @moonhalf383/pi-whoasked
 
 English | [简体中文](README.zh-CN.md)
+
+![Nobody asked you](whoasked.jpg)
 
 A Pi extension that watches streaming assistant replies for configurable regex patterns. On a match, it interrupts generation and sends the rule's correction prompt, asking the model to answer again from the beginning.
 
@@ -24,7 +26,7 @@ pi install /path/to/whoasked
 
 ## Configuration
 
-Two built-in rules are enabled by default: `不能声称` (roughly, “cannot claim”) and `不将…冒充为` (“not passing … off as …”). They match wording, so ordinary quotations of these phrases also trigger them. Adjust the rules to suit your usage. The built-in patterns and correction prompts are in Chinese; use your own rules for other languages.
+Chinese and English rules are enabled by default: all eight groups from the Chinese strict preset plus nine English groups. Notifications, status text, configuration errors, and correction-message framing use English. Default rule names and correction prompts are also in English; prompts ask the model to keep the user's requested reply language. Custom rule names and prompts are displayed as configured.
 
 Configuration is merged in this order, with later values taking precedence:
 
@@ -40,7 +42,9 @@ You can also specify a standalone file. It is applied over the built-in defaults
 pi -e ./src/index.ts --whoasked-config ./whoasked.example.json
 ```
 
-See [whoasked.example.json](whoasked.example.json) for a complete Chinese-language example. A minimal English-language configuration:
+No configuration file is needed to use the bilingual defaults. To keep the defaults while adjusting the retry limit, use `{ "maxRetries": 4 }`. A file containing `rules` replaces all built-in rules, including English rules; remove that field to inherit future defaults.
+
+See [whoasked.example.json](whoasked.example.json) for a smaller custom Chinese rule set. A minimal English-only override:
 
 ```json
 {
@@ -69,19 +73,17 @@ Configuration fields:
 
 Rules are checked in configuration order; the first matching rule in a snapshot wins. Match state is reset for `g`; `y` retains its sticky semantics. Patterns that match empty input are rejected, and zero-width matches encountered at runtime are skipped. Unknown fields, invalid regexes, or invalid values produce an error and disable detection. Fix the configuration and run `/whoasked reload`.
 
-The example file also includes a disabled “not A but B” rule for Chinese text. That construction often has a legitimate use, so narrow the pattern before enabling it.
-
-For more aggressive Chinese-language filtering, use [configs/zh-CN.strict.json](configs/zh-CN.strict.json):
+For single-language overrides, use [configs/zh-CN.strict.json](configs/zh-CN.strict.json) (Chinese names and prompts) or [configs/en.strict.json](configs/en.strict.json) (English). These are subsets of the bilingual defaults, not additional detection modes:
 
 ```bash
 pi -e ./src/index.ts --whoasked-config ./configs/zh-CN.strict.json
 ```
 
-This preset has eight groups with separate correction prompts: phantom contrasts, unsupported accusations of repackaging or exaggeration, defensive evidence qualifiers, replacement disclaimers, exclusive causality, unsolicited action exclusions, hypothetical implications, and a broad negation fallback. It covers phrases such as `而不是`, `不是…而是`, `不把`, `不能替代`, `不据此`, `不宣称`, `不预设`, `不得声称`, `重新包装`, `扩张为`, `唯一原因`, `重新发明`, `尚不能`, `不应继续`, `不能`, `不得`, `不进入`, `不参与`, and `不再`, plus variants such as `这不意味着`, `这不代表`, and `不等于`.
+Both languages cover contrasts, repackaging accusations, evidence qualifiers, replacement disclaimers, exclusive causality, action exclusions, hypothetical implications, and broad negation. English adds formulaic caveats. Common English forms include negative-positive contrasts, implication disclaimers, replacement warnings, and stock cautionary introductions. Matching is case-insensitive for English and supports straight and curly apostrophes. See [English pattern notes](docs/english-patterns.md) for examples and user reports that informed the rules.
 
-This is aggressive lexical filtering: ordinary statements containing `不能` or `不得` will also trigger it. Specific rules precede fallback rules, but if a streaming chunk ends at `不能`, the fallback triggers immediately without waiting for the rest. Correction prompts preserve facts, necessary limitations, and important risks while asking for more direct wording.
+The defaults are aggressive lexical filters. Ordinary negation, comparisons, quotations, and code examples can trigger corrections. Specific groups precede broad fallback rules, but a short streaming prefix can trigger the fallback before a more specific phrase arrives. Correction prompts preserve facts, important risks, and necessary limitations. Narrow or replace rules to reduce false positives.
 
-To use it across projects, copy it to `~/.pi/agent/whoasked.json` (back up any existing file), then run `/whoasked reload`. An explicitly selected configuration or a trusted project's configuration can override it.
+After updating the extension, run `/reload` to load the new code. `/whoasked reload` only reloads configuration files.
 
 ## Example
 
@@ -92,7 +94,7 @@ Assistant: The project has unit and integration tests. We cannot claim…
 [Reply interrupted]
 
 whoasked-correction:
-[Previous reply superseded; matched “Unprompted defensive disclaimer”; correction 1/2]
+[Previous reply superseded; matched “Defensive evidence qualifiers [en]”; correction 1/2]
 <The rule's correction prompt>
 Answer the original question from the beginning and reuse existing tool results.
 
@@ -134,11 +136,24 @@ npm run check
 
 `check` runs TypeScript checks, configuration and streaming unit tests, and real Pi SDK lifecycle tests. SDK tests use a local simulated model stream, make no online model calls, and do not read user credentials.
 
+This package uses Pi's explicit `pi.extensions` manifest to load `src/index.ts`. An `extensions/` directory and compiled JavaScript output are optional; Pi loads the TypeScript entry directly. The Pi host is declared as a peer dependency and is excluded from the archive. Pi 1.4.0+ is required by the extension API.
+
+Prepare and verify a local release archive without publishing:
+
+```bash
+npm pack
+npm run pack:check
+```
+
+`npm pack` runs `check` first through `prepack`. `pack:check` installs the archive in an isolated temporary directory, checks its contents, and verifies Pi package discovery and bilingual startup without calling a model. The resulting file is `moonhalf383-pi-whoasked-0.1.0.tgz`. Scoped npm packages are configured for public access; these commands only create and test a local archive.
+
 Project files:
 
 ```text
 src/index.ts           Pi extension entry point
 src/config.ts          Configuration loading and regex validation
+src/defaults.ts        Bilingual default rule assembly
+configs/               Chinese and English rule presets
 src/extension.ts       Streaming detection, interruption, and retries
 whoasked.example.json  Editable configuration example
 tests/                 Unit and SDK integration tests

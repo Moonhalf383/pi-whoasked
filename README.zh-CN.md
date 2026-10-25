@@ -1,6 +1,8 @@
-# pi-whoasked
+# @moonhalf383/pi-whoasked
 
 [English](README.md) | 简体中文
+
+![没人问你 / Nobody asked you](whoasked.jpg)
 
 一个 Pi 扩展：用可配置正则检测助手流式回答中的表述，命中后中断，发送对应的校正 prompt，要求模型从头重新回答。
 
@@ -24,7 +26,7 @@ pi install /path/to/whoasked
 
 ## 配置
 
-默认启用两条内置规则：`不能声称` 和 `不将…冒充为`。它们只检查措辞；正常引用这些短语也会命中。请根据自己的使用习惯调整。
+默认同时启用中文和英文规则：原有中文严格预设的 8 组规则，以及 9 组英文规则。通知、状态、配置错误和校正消息框架统一使用英文；默认规则名称与校正 prompt 也使用英文，指令要求保留用户指定的回答语言。自定义规则名称和 prompt 按配置原样显示。
 
 配置按以下顺序合并，后者优先：
 
@@ -40,7 +42,9 @@ pi install /path/to/whoasked
 pi -e ./src/index.ts --whoasked-config ./whoasked.example.json
 ```
 
-[whoasked.example.json](whoasked.example.json) 是完整示例。最小自定义配置：
+无需配置文件即可使用双语默认规则。仅调整重试上限时可写 `{ "maxRetries": 4 }`；已有文件中的 `rules` 会替换全部默认规则，包括英文规则。删除该字段即可跟随后续默认值。
+
+[whoasked.example.json](whoasked.example.json) 是较小的自定义中文规则示例。最小自定义配置：
 
 ```json
 {
@@ -69,19 +73,17 @@ pi -e ./src/index.ts --whoasked-config ./whoasked.example.json
 
 规则按配置顺序检查，同一快照多条命中时采用第一条。`g` 的匹配状态会重置，`y` 保留其粘连匹配语义。可匹配空输入的规则会被拒绝，运行中零宽命中会被跳过。未知字段、无效正则和非法值会报错并关闭检测，修复后执行 `/whoasked reload`。
 
-示例中还包含一条默认关闭的「不是 A 而是 B」规则。这种句式经常有正常用途，开启前建议收窄范围。
-
-如需更严格的中文措辞校正，可使用 [configs/zh-CN.strict.json](configs/zh-CN.strict.json)：
+如需仅检测一种语言，可使用 [configs/zh-CN.strict.json](configs/zh-CN.strict.json)（中文名称和 prompt）或 [configs/en.strict.json](configs/en.strict.json)（英文）。它们是双语默认规则的子集：
 
 ```bash
 pi -e ./src/index.ts --whoasked-config ./configs/zh-CN.strict.json
 ```
 
-预设将虚假对立、包装与扩大主张、证据限定、替代关系、单一因果、行动排除、假想推论和宽泛否定分成 8 组，分别设置校正 prompt。包含「而不是」「不是…而是」「不把」「不能替代」「不据此」「不宣称」「不预设」「不得声称」「重新包装」「扩张为」「唯一原因」「重新发明」「尚不能」「不应继续」「不能」「不得」「不进入」「不参与」「不再」，并补充「这不意味着」「这不代表」「不等于」等变体。
+两种语言都覆盖虚假对立、包装与扩大主张、证据限定、替代关系、单一因果、行动排除、假想推论和宽泛否定；英文另加模板化 caveat 规则。英文匹配支持大小写变化、直引号与弯引号缩写。具体表达及参考讨论见 [英文规则说明](docs/english-patterns.md)。
 
-这是激进的词面检测：「不能」「不得」等正常表述也会触发。具体规则排在兜底规则之前；但流式文本若先到达「不能」，兜底规则会立即生效，不等后文补齐。校正 prompt 要求保留事实、必要限制与重要风险，调整表达而非盲目附和用户。
+默认使用激进的词面检测，正常否定、比较、引文和代码示例也可能触发。具体规则排在兜底规则之前；流式前缀可能先触发兜底，再到达具体短语。校正 prompt 要求保留事实、必要限制与重要风险。可通过收窄或替换规则降低误报。
 
-要在所有项目中使用，可将此文件复制到 `~/.pi/agent/whoasked.json`（已有文件时先备份），然后执行 `/whoasked reload`。独立指定配置或受信任项目的配置可以覆盖它。
+升级插件后执行 `/reload` 加载新代码；`/whoasked reload` 仅重读配置文件。
 
 ## 运行效果
 
@@ -92,9 +94,8 @@ pi -e ./src/index.ts --whoasked-config ./configs/zh-CN.strict.json
 [回答已中断]
 
 whoasked-correction：
-[上一条回答已作废；命中「无端引入冒充关系」；自动校正 1/2]
-<这条规则配置的校正 prompt>
-请从头重新回答原用户问题，复用已有工具结果。
+[Previous reply superseded; matched "Unsupported accusations of repackaging [zh]"; correction 1/2]
+<这条规则配置的英文校正 prompt，要求保留原回答语言并复用已有结果>
 
 助手：项目包含单元测试和集成测试，覆盖核心函数与主要接口。
 目前尚未覆盖并发和故障恢复场景。
@@ -134,11 +135,24 @@ npm run check
 
 `check` 包含 TypeScript 检查、配置与流式检测单元测试，以及真实 Pi SDK 生命周期测试。SDK 测试使用本地模拟模型流，不调用在线模型，不读取用户凭据。
 
+本包通过 Pi 的 `pi.extensions` 显式清单加载 `src/index.ts`。`extensions/` 目录和编译后的 JavaScript 均为可选项，Pi 直接加载 TypeScript 入口。Pi 宿主声明为 peer dependency，压缩包不包含宿主副本；扩展 API 要求 Pi 1.4.0+。
+
+本地准备并验证发布包：
+
+```bash
+npm pack
+npm run pack:check
+```
+
+`npm pack` 会通过 `prepack` 先执行 `check`。`pack:check` 在独立临时目录中安装压缩包，检查内容，并验证 Pi 包发现与双语启动，全程使用本地文件。产物为 `moonhalf383-pi-whoasked-0.1.0.tgz`。已配置 scoped npm 包的公开访问权限，以上命令仅本地打包与验证。
+
 文件结构：
 
 ```text
 src/index.ts           Pi 扩展入口
 src/config.ts          配置加载与正则校验
+src/defaults.ts        双语默认规则组装
+configs/               中文及英文规则预设
 src/extension.ts       流式检测、中断和重试生命周期
 whoasked.example.json  可编辑的配置示例
 tests/                 单元测试与 SDK 集成测试

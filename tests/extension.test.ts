@@ -87,9 +87,9 @@ test("split-chunk pattern aborts once, then sends visible correction only after 
   assert.equal(f.sent.length, 1);
   const { message, options } = f.sent[0];
   assert.equal(message.display, true);
-  assert.match(message.content, /上一条回答已中断并作废/);
+  assert.match(message.content, /Previous reply interrupted and superseded/);
   assert.match(message.content, /请直接说明测试情况/);
-  assert.match(message.content, /从头重新回答原用户问题/);
+  assert.match(message.content, /Answer the original user request from the beginning/);
   assert.equal(options.triggerTurn, true);
   assert.equal(message.details.matched, "不将已有测试冒充为");
   await f.settle();
@@ -106,7 +106,7 @@ test("retry budget survives own correction runs; limit does not hide or abort la
   assert.equal(f.aborts, 2);
   assert.equal(f.sent.length, 2);
   assert.match(f.sent[1].message.content, /2\/2/);
-  assert.ok(f.notices.some((notice) => notice.includes("上限")));
+  assert.ok(f.notices.some((notice) => notice.includes("retry limit")));
   assert.equal(f.entries.length, 1);
   await f.start();
   await f.update(assistant("不将测试冒充为保证"));
@@ -259,7 +259,7 @@ test("reload validates new rules; invalid configuration disables detection", asy
   await f.command("reload");
   await f.update(assistant("不将测试冒充为保证"));
   assert.equal(f.aborts, 0);
-  assert.ok(f.notices.some((notice) => notice.includes("配置加载失败")));
+  assert.ok(f.notices.some((notice) => notice.includes("Configuration load failed")));
   await writeFile(f.configPath, JSON.stringify({ rules: [{ ...testRule, pattern: "新的词组" }] }));
   await f.command("on");
   await f.update(assistant("不将测试冒充为保证"));
@@ -280,6 +280,37 @@ test("shutdown discards pending correction and session_start reloads", async (t)
   await f.start();
   await f.update(assistant("不将测试冒充为保证"));
   assert.equal(f.aborts, 2);
+});
+
+test("bilingual defaults detect split English text and emit English UI messages", async (t) => {
+  const f = await fixture(t, {});
+  await f.command("status");
+  await f.update(assistant("That doesn’"));
+  assert.equal(f.aborts, 0);
+  await f.update(assistant("That doesn’t mean"));
+  await f.settle();
+  assert.equal(f.aborts, 1);
+  assert.equal(f.sent[0].message.details.rule, "Hypothetical implications [en]");
+  assert.match(f.sent[0].message.content, /original language/);
+  assert.match(f.sent[0].message.content, /language requested by the user/);
+  await f.command("cancel");
+  await f.command("off");
+  await f.command("on");
+  await f.command("reload");
+  await f.command("unknown");
+  for (const text of [...f.notices, ...f.statuses, f.sent[0].message.content]) {
+    assert.ok(!/\p{Script=Han}/u.test(text), text);
+  }
+});
+
+test("configuration failure and limit notifications default to English", async (t) => {
+  const f = await fixture(t, { maxRetries: 0 });
+  await f.update(assistant("cannot"));
+  assert.match(f.notices.at(-1)!, /retry limit/);
+  await writeFile(f.configPath, JSON.stringify({ enabled: "yes" }));
+  await f.command("reload");
+  assert.match(f.notices.at(-1)!, /Configuration load failed.*must be a boolean/);
+  assert.ok(!/\p{Script=Han}/u.test(f.notices.join("")));
 });
 
 test("unrelated custom run resets retry budget", async (t) => {

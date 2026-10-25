@@ -1,0 +1,60 @@
+{
+  "enabled": true,
+  "maxRetries": 2,
+  "rules": [
+    {
+      "name": "Phantom contrasts",
+      "pattern": "\\b(?:rather\\s+than|instead\\s+of)\\b|\\bnot\\b[^.!?\\r\\n]{1,160}?\\bbut\\b|\\b(?:(?:it|this|that|you)(?:['’](?:s|re)|\\s+(?:is|are))\\s+not|(?:it|this|that|you)\\s+(?:isn|aren)['’]t)\\b[^.!?\\r\\n]{1,160}?(?:[,;:—–-]\\s*|\\.\\s*)(?:it|this|that|you)(?:['’](?:s|re)|\\s+(?:is|are))\\b",
+      "flags": "iu",
+      "correctionPrompt": "Answer the original question again in its original language. State your point directly and affirmatively. Remove formulaic negative-positive contrasts and unrelated alternatives that the user never raised. Preserve meaningful distinctions by explaining the concepts and applicable conditions directly. Keep the user's original scope and do not mention this correction."
+    },
+    {
+      "name": "Unsupported accusations of repackaging",
+      "pattern": "\\b(?:repackag(?:e|es|ed|ing)|reinvent(?:s|ed|ing)?\\s+the\\s+wheel|pass(?:ing)?\\s+off|masquerad(?:e|es|ed|ing)\\s+as)\\b",
+      "flags": "iu",
+      "correctionPrompt": "Answer the original question again in its original language. Describe the actual approach, changes, and results. Remove unsupported accusations of repackaging, passing something off, or unnecessary reinvention. Preserve the user's stated claim strength and scope. If duplication or exaggeration genuinely matters, give concrete evidence and practical consequences. Avoid reproducing the accusation with synonyms and do not mention this correction."
+    },
+    {
+      "name": "Defensive evidence qualifiers",
+      "pattern": "\\b(?:cannot|can['’]t|must\\s+not|should\\s+not|shouldn['’]t|do\\s+not|don['’]t)\\s+(?:claim|assume|conclude|infer|assert|presume)\\b|\\b(?:not\\s+claiming|without\\s+(?:claiming|assuming))\\b",
+      "flags": "iu",
+      "correctionPrompt": "Answer the original question again in its original language. State what the evidence supports and the conditions under which the conclusion applies. Remove warnings about claims, assumptions, or inferences the user never made. Preserve qualifiers that materially change the conclusion, evidence evaluation, or recommended action, explaining the specific gap and its consequences. Do not merely substitute another disclaimer and do not mention this correction."
+    },
+    {
+      "name": "Unsolicited replacement disclaimers",
+      "pattern": "\\b(?:not\\s+(?:a\\s+)?(?:substitute|replacement)\\s+for|(?:cannot|can['’]t|does\\s+not|doesn['’]t)\\s+replace)\\b",
+      "flags": "iu",
+      "correctionPrompt": "Answer the original question again in its original language. Describe the actual use, applicable conditions, and any concrete next steps. Discuss replacement only when the user asked about it or it materially changes the recommendation. Retain important limitations and risks as specific conditions and actionable guidance. Remove generic replacement disclaimers and do not mention this correction."
+    },
+    {
+      "name": "Invented exclusive causality",
+      "pattern": "\\b(?:the\\s+)?(?:only|sole|single)\\s+(?:reason|cause|factor)\\b|\\bcorrelation\\s+(?:does\\s+not|doesn['’]t)\\s+(?:necessarily\\s+)?imply\\s+causation\\b",
+      "flags": "iu",
+      "correctionPrompt": "Answer the original question again in its original language. Preserve the strength and scope of the user's causal claim. Describe observed associations, plausible mechanisms, and supported conclusions. Remove rebuttals to exclusive causation when the user never asserted it. When causal identification is actually at issue, explain the evidence's resolving power and relevant controls. Keep important uncertainty without inventing an opposing position, and do not mention this correction."
+    },
+    {
+      "name": "Unsolicited action exclusions",
+      "pattern": "\\b(?:cannot\\s+yet|can['’]t\\s+yet|should\\s+not\\s+continue|shouldn['’]t\\s+continue|(?:will\\s+not|won['’]t)\\s+(?:engage|participate|proceed|continue)|no\\s+longer)\\b",
+      "flags": "iu",
+      "correctionPrompt": "Answer the original question again in its original language. Explain the actual scope, feasible conclusions, and next steps. Remove unsolicited declarations of withdrawal, exclusion, or prohibition. Respect the user's explicit stop requests and boundaries. Where a genuine capability limit, failure condition, or safety constraint matters, describe the concrete reason, effect, and feasible next action. Preserve facts and important constraints, and do not mention this correction."
+    },
+    {
+      "name": "Hypothetical implications",
+      "pattern": "\\b(?:this|that|it)\\s+(?:does\\s+not|doesn['’]t)\\s+(?:necessarily\\s+)?(?:mean|imply|prove)\\b|\\b(?:not|isn['’]t)\\s+(?:necessarily\\s+)?(?:the\\s+same\\s+as|equivalent\\s+to)\\b",
+      "flags": "iu",
+      "correctionPrompt": "Answer the original question again in its original language. Address what the user actually said. Remove clarifications aimed at implications or stronger interpretations that were never asserted. If a distinction materially affects the conclusion, explain the relevant concepts, conditions, and evidence directly. Correct genuine errors with specific reasons, and do not mention this correction."
+    },
+    {
+      "name": "Formulaic caveats",
+      "pattern": "\\b(?:one\\s+(?:important\\s+)?(?:caveat|distinction)|one\\s+thing\\s+i(?:['’]d|\\s+would)\\s+caution\\s+against|it(?:['’]s|\\s+is)\\s+important\\s+to\\s+(?:note|remember)|to\\s+be\\s+clear)\\b",
+      "flags": "iu",
+      "correctionPrompt": "Answer the original question again in its original language. Remove stock cautionary introductions and repetitive clarifications. Include a qualification only when it materially changes the conclusion, evaluation of evidence, or action recommendation, and state that concrete information directly. Preserve important uncertainty, risks, and substantive disagreement without adding imaginary objections. Do not mention this correction."
+    },
+    {
+      "name": "Broad negation fallback",
+      "pattern": "\\b(?:cannot|can['’]t|must\\s+not|mustn['’]t)\\b",
+      "flags": "iu",
+      "correctionPrompt": "Answer the original question again in its original language. Use natural, specific, direct wording. Remove unrelated prohibitions and defensive statements aimed at positions or motives the user never expressed. Preserve factual corrections, important safety risks, genuine capability limits, and explicit user constraints; explain concrete conditions, practical effects, and feasible next steps. State the scope of evidence directly. Do not turn the same invented opposition into synonyms, and do not mention this correction."
+    }
+  ]
+}

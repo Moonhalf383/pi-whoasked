@@ -9,7 +9,7 @@ const rule = { name: "test", pattern: "不将.{1,40}冒充为", correctionPrompt
 
 test("defaults and example configuration are valid", async () => {
   assert.equal(parseConfig({}).maxRetries, 2);
-  assert.equal(compileRules(DEFAULT_CONFIG.rules).length, 2);
+  assert.equal(compileRules(DEFAULT_CONFIG.rules).length, 17);
   const example = await loadConfig({ cwd: process.cwd(), agentDir: "unused", trusted: false, explicitPath: "whoasked.example.json" });
   assert.equal(compileRules(example.config.rules).length, 2);
 });
@@ -22,21 +22,21 @@ test("rules replace defaults; empty rules disables all matching", () => {
 
 test("invalid config is rejected with useful errors", () => {
   const cases: [unknown, RegExp][] = [
-    [null, /对象/],
-    [{ patterns: [] }, /未知配置字段/],
-    [{ enabled: "yes" }, /布尔值/],
-    [{ maxRetries: -1 }, /非负/],
-    [{ maxRetries: 1.5 }, /非负/],
-    [{ rules: "x" }, /数组/],
-    [{ rules: [{ ...rule, correctionPrompt: " " }] }, /非空/],
-    [{ rules: [rule, rule] }, /重复/],
-    [{ rules: [{ ...rule, pattern: "[" }] }, /正则无效/],
-    [{ rules: [{ ...rule, pattern: "a*" }] }, /空字符串/],
-    [{ rules: [{ ...rule, flags: "q" }] }, /正则无效/],
-    [{ rules: [{ ...rule, flags: 1 }] }, /字符串/],
-    [{ rules: [{ ...rule, enabled: "false" }] }, /布尔值/],
-    [{ rules: [{ ...rule, prompt: "typo" }] }, /未知字段/],
-    [{ rules: [{ ...rule, enabled: false, pattern: "[" }] }, /正则无效/],
+    [null, /must be an object/],
+    [{ patterns: [] }, /Unknown configuration fields/],
+    [{ enabled: "yes" }, /must be a boolean/],
+    [{ maxRetries: -1 }, /nonnegative/],
+    [{ maxRetries: 1.5 }, /nonnegative/],
+    [{ rules: "x" }, /must be an array/],
+    [{ rules: [{ ...rule, correctionPrompt: " " }] }, /nonempty/],
+    [{ rules: [rule, rule] }, /Duplicate/],
+    [{ rules: [{ ...rule, pattern: "[" }] }, /Invalid regex/],
+    [{ rules: [{ ...rule, pattern: "a*" }] }, /empty input/],
+    [{ rules: [{ ...rule, flags: "q" }] }, /Invalid regex/],
+    [{ rules: [{ ...rule, flags: 1 }] }, /must be a string/],
+    [{ rules: [{ ...rule, enabled: "false" }] }, /must be a boolean/],
+    [{ rules: [{ ...rule, prompt: "typo" }] }, /unknown fields/],
+    [{ rules: [{ ...rule, enabled: false, pattern: "[" }] }, /Invalid regex/],
   ];
   for (const [input, expected] of cases) assert.throws(() => parseConfig(input), expected);
 });
@@ -65,7 +65,7 @@ test("config precedence, project trust and explicit paths", async (t) => {
   assert.equal(explicit.config.maxRetries, 1);
   assert.deepEqual(explicit.config.rules, DEFAULT_CONFIG.rules);
   assert.equal(explicit.paths.length, 1);
-  await assert.rejects(loadConfig({ cwd, agentDir, trusted: false, explicitPath: "missing.json" }), /无法读取/);
+  await assert.rejects(loadConfig({ cwd, agentDir, trusted: false, explicitPath: "missing.json" }), /Unable to read/);
   await writeFile(join(agentDir, "whoasked.json"), "{ broken");
   await assert.rejects(loadConfig({ cwd, agentDir, trusted: false }), /whoasked.json/);
 });

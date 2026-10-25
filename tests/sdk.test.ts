@@ -17,12 +17,16 @@ const scenarios = [
   { name: "limit=2", maxRetries: 2, correctedRetry: false, manualStop: false },
   { name: "successful rewrite", maxRetries: 2, correctedRetry: true, manualStop: false },
   { name: "manual stop during rewrite", maxRetries: 2, correctedRetry: true, manualStop: true },
+  { name: "English bilingual defaults", maxRetries: 2, correctedRetry: true, manualStop: false },
+  { name: "Chinese bilingual defaults", maxRetries: 2, correctedRetry: true, manualStop: false },
 ];
 for (const { name, maxRetries, correctedRetry, manualStop } of scenarios) {
   test(`Pi SDK: real abort + post-settlement correction (${name})`, async (t) => {
     const root = await mkdtemp(join(tmpdir(), "whoasked-sdk-"));
     t.after(() => rm(root, { recursive: true, force: true }));
-    await writeFile(join(root, "whoasked.json"), JSON.stringify({
+    const useDefaults = name.endsWith("bilingual defaults");
+    const englishReply = name.startsWith("English");
+    await writeFile(join(root, "whoasked.json"), JSON.stringify(useDefaults ? { maxRetries } : {
       maxRetries,
       rules: [{ name: "测试", pattern: "不将.{1,40}冒充为", correctionPrompt: "请重新回答原问题。" }],
     }));
@@ -85,8 +89,8 @@ for (const { name, maxRetries, correctedRetry, manualStop } of scenarios) {
         stream.push({ type: "text_start", contentIndex: 0, partial: message });
         // Separate turns of the event loop let the SDK process each snapshot before the next.
         const deltas = correctedRetry && requests.length > 1
-          ? ["项目有单元测试。", "尚缺并发测试。", "鼓励补充测试。"]
-          : ["项目有测试。不将已有测试冒", "充为质量保证", "。结束。鼓励补充测试。"];
+          ? (englishReply ? ["Unit tests cover core functions.", " Add concurrency tests."] : ["项目有单元测试。", "尚缺并发测试。", "鼓励补充测试。"])
+          : (englishReply ? ["That doesn’", "t mean", " the project has complete coverage."] : ["项目有测试。不将已有测试冒", "充为质量保证", "。结束。鼓励补充测试。"]);
         for (const delta of deltas) {
           await nextTick();
           if (options?.signal?.aborted) break;
@@ -108,7 +112,8 @@ for (const { name, maxRetries, correctedRetry, manualStop } of scenarios) {
       })();
       return stream;
     };
-    await session.prompt("介绍一下这个项目的测试情况");
+    const prompt = englishReply ? "What tests does the project have?" : "介绍一下这个项目的测试情况";
+    await session.prompt(prompt);
     assert.deepEqual(errors, []);
     const retryCount = correctedRetry ? 1 : maxRetries;
     assert.equal(requests.length, retryCount + 1);
@@ -117,9 +122,13 @@ for (const { name, maxRetries, correctedRetry, manualStop } of scenarios) {
     const corrections = session.messages.filter((message) => message.role === "custom" && message.customType === "whoasked-correction");
     assert.equal(corrections.length, retryCount);
     const lastRequestText = JSON.stringify(requests.at(-1));
-    assert.match(lastRequestText, /介绍一下这个项目的测试情况/);
-    assert.match(lastRequestText, /请重新回答原问题/);
-    if (!manualStop) assert.ok(session.getLastAssistantText()?.includes("鼓励补充测试"));
+    assert.ok(lastRequestText.includes(prompt));
+    assert.match(lastRequestText, useDefaults ? /original language/ : /请重新回答原问题/);
+    if (useDefaults) {
+      assert.equal(corrections[0].role, "custom");
+      assert.ok(!/\p{Script=Han}/u.test(String(corrections[0].content)));
+    }
+    if (!manualStop) assert.ok(session.getLastAssistantText()?.includes(englishReply ? "concurrency tests" : "鼓励补充测试"));
     assert.equal(session.isIdle, true);
   });
 }

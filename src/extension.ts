@@ -56,7 +56,7 @@ export function registerWhoasked(pi: ExtensionAPI, agentDir: string): void {
       config = { ...config, enabled: false };
       reset();
       status(ctx);
-      ctx.ui.notify(`whoasked 配置加载失败，检测已关闭：${String(error)}`, "error");
+      ctx.ui.notify(`whoasked: Configuration load failed; detection disabled. ${String(error)}`, "error");
       return false;
     }
   }
@@ -88,13 +88,13 @@ export function registerWhoasked(pi: ExtensionAPI, agentDir: string): void {
       handled = true;
       if (retries >= config.maxRetries) {
         pi.appendEntry("whoasked-limit", { rule: rule.name, retries });
-        ctx.ui.notify(`whoasked：再次命中「${rule.name}」，已达到 ${config.maxRetries} 次自动校正上限。本次回答继续显示。`, "warning");
+        ctx.ui.notify(`whoasked: Matched "${rule.name}"; retry limit (${config.maxRetries}) reached. The current reply will continue.`, "warning");
         return;
       }
       pending = { rule, matched: match[0] };
       // Do not await abort/idle from inside a stream handler: that would deadlock.
       ctx.abort();
-      ctx.ui.notify(`whoasked：命中「${rule.name}」，已请求中断，准备重新回答。`, "warning");
+      ctx.ui.notify(`whoasked: Matched "${rule.name}"; interruption requested. Preparing a new reply.`, "warning");
       return;
     }
   }
@@ -149,9 +149,9 @@ export function registerWhoasked(pi: ExtensionAPI, agentDir: string): void {
     pi.sendMessage({
       customType: CORRECTION_TYPE,
       content: [
-        `[whoasked：上一条回答已中断并作废；命中规则「${hit.rule.name}」；自动校正 ${retries}/${config.maxRetries}]`,
+        `[whoasked: Previous reply interrupted and superseded; matched "${hit.rule.name}"; correction ${retries}/${config.maxRetries}]`,
         hit.rule.correctionPrompt,
-        "请从头重新回答原用户问题，不要接着被中断的句子续写。使用已有的工具结果，避免为了重写回复重复执行已完成的操作。",
+        "Answer the original user request from the beginning in the language requested by the user. Reuse existing tool results and avoid repeating completed operations merely to rewrite the reply.",
       ].join("\n\n"),
       display: true,
       details: { retryToken: expectedRetryToken, rule: hit.rule.name, matched: hit.matched, retry: retries },
@@ -165,8 +165,8 @@ export function registerWhoasked(pi: ExtensionAPI, agentDir: string): void {
         case "status":
           ctx.ui.notify([
             `whoasked: ${config.enabled ? "on" : "off"}; maxRetries=${config.maxRetries}; retries=${retries}`,
-            `配置：${paths.length ? paths.join(", ") : "内置默认规则"}`,
-            `启用规则：${rules.map((rule) => rule.name).join("、") || "无"}`,
+            `Configuration: ${paths.length ? paths.join(", ") : "Built-in bilingual defaults"}`,
+            `Enabled rules: ${rules.map((rule) => rule.name).join(", ") || "None"}`,
           ].join("\n"), "info");
           return;
         case "on":
@@ -174,25 +174,25 @@ export function registerWhoasked(pi: ExtensionAPI, agentDir: string): void {
           if (await reload(ctx)) {
             config.enabled = true;
             status(ctx);
-            ctx.ui.notify("whoasked：检测已开启（仅当前会话）。", "info");
+            ctx.ui.notify("whoasked: Detection enabled for this session.", "info");
           }
           return;
         case "off":
           config.enabled = false;
           reset();
           status(ctx);
-          ctx.ui.notify("whoasked：检测已关闭，待执行校正已取消（仅当前会话）。", "info");
+          ctx.ui.notify("whoasked: Detection disabled and pending correction cancelled for this session.", "info");
           return;
         case "cancel":
           reset();
           superseded = true;
-          ctx.ui.notify("whoasked：本次请求的后续自动校正已取消；下次用户输入恢复检测。", "info");
+          ctx.ui.notify("whoasked: Further corrections cancelled for this request. Detection resumes on the next user input.", "info");
           return;
         case "reload":
-          if (await reload(ctx)) ctx.ui.notify("whoasked：配置已重新加载。", "info");
+          if (await reload(ctx)) ctx.ui.notify("whoasked: Configuration reloaded.", "info");
           return;
         default:
-          ctx.ui.notify("用法：/whoasked [status|on|off|reload|cancel]", "warning");
+          ctx.ui.notify("Usage: /whoasked [status|on|off|reload|cancel]", "warning");
       }
     },
   });
