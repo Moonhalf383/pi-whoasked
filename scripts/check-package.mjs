@@ -12,7 +12,7 @@ const filename = `${manifest.name.replace(/^@/, "").replaceAll("/", "-")}-${mani
 const archive = resolve(process.argv[2] ?? join(root, filename));
 const files = execFileSync("tar", ["-tzf", archive], { encoding: "utf8" }).trim().split("\n");
 for (const path of [
-  "package.json", "LICENSE", "README.md", "README.zh-CN.md", "whoasked.jpg",
+  "package.json", "LICENSE", "README.md", "README.zh-CN.md", "whoasked.jpg", "example.png",
   "src/index.ts", "src/extension.ts", "src/config.ts", "src/defaults.ts",
   "configs/zh-CN.strict.json", "configs/en.strict.json", "docs/english-patterns.md", "whoasked.example.json",
 ]) assert.ok(files.includes(`package/${path}`), `Missing published file: ${path}`);

@@ -4,25 +4,35 @@
 
 ![没人问你 / Nobody asked you](whoasked.jpg)
 
-一个 Pi 扩展：用可配置正则检测助手流式回答中的表述，命中后中断，发送对应的校正 prompt，要求模型从头重新回答。
-
-保留被中断的片段，标注作废，然后重新回答。已经显示的文字不会撤回。
+一个 Pi 扩展，用可配置正则检测助手流式回答中的表述，命中后中断，发送对应的校正 prompt，要求模型从头重新回答。
 
 ## 安装
 
 需要 Pi（`@earendil-works/pi-coding-agent`）1.4.0+ 和 Node.js 22.19+。运行测试推荐 Node.js 24。
 
-在仓库目录中临时加载：
+通过 npm 安装：
 
 ```bash
+pi install npm:@moonhalf383/pi-whoasked
+```
+
+重启 Pi 或执行 `/reload`，即可使用内置双语规则。
+
+也可以从 GitHub 安装：
+
+```bash
+pi install git:github.com/Moonhalf383/pi-whoasked
+```
+
+本地开发时，克隆仓库并临时加载：
+
+```bash
+git clone https://github.com/Moonhalf383/pi-whoasked.git
+cd pi-whoasked
 pi -e ./src/index.ts
 ```
 
-持久安装：
-
-```bash
-pi install /path/to/whoasked
-```
+如需持久加载本地副本，在仓库目录执行 `pi install .`。
 
 ## 配置
 
@@ -39,8 +49,10 @@ pi install /path/to/whoasked
 也可以指定独立配置文件，此时只在内置默认值之上应用该文件，不再读取个人和项目配置：
 
 ```bash
-pi -e ./src/index.ts --whoasked-config ./whoasked.example.json
+pi --whoasked-config /path/to/whoasked.json
 ```
+
+此命令要求已安装插件；从源码临时加载时，加上 `-e ./src/index.ts`。
 
 无需配置文件即可使用双语默认规则。仅调整重试上限时可写 `{ "maxRetries": 4 }`；已有文件中的 `rules` 会替换全部默认规则，包括英文规则。删除该字段即可跟随后续默认值。
 
@@ -73,7 +85,7 @@ pi -e ./src/index.ts --whoasked-config ./whoasked.example.json
 
 规则按配置顺序检查，同一快照多条命中时采用第一条。`g` 的匹配状态会重置，`y` 保留其粘连匹配语义。可匹配空输入的规则会被拒绝，运行中零宽命中会被跳过。未知字段、无效正则和非法值会报错并关闭检测，修复后执行 `/whoasked reload`。
 
-如需仅检测一种语言，可使用 [configs/zh-CN.strict.json](configs/zh-CN.strict.json)（中文名称和 prompt）或 [configs/en.strict.json](configs/en.strict.json)（英文）。它们是双语默认规则的子集：
+如需仅检测一种语言，可使用 [configs/zh-CN.strict.json](configs/zh-CN.strict.json)（中文名称和 prompt）或 [configs/en.strict.json](configs/en.strict.json)（英文）。它们是双语默认规则的子集。在源码目录中运行：
 
 ```bash
 pi -e ./src/index.ts --whoasked-config ./configs/zh-CN.strict.json
@@ -87,19 +99,9 @@ pi -e ./src/index.ts --whoasked-config ./configs/zh-CN.strict.json
 
 ## 运行效果
 
-```text
-用户：介绍一下这个项目的测试情况。
+![Pi 中断命中规则的回答并发送校正 prompt](example.png)
 
-助手：项目包含单元测试和集成测试。不将已有测试冒充为……
-[回答已中断]
-
-whoasked-correction：
-[Previous reply superseded; matched "Unsupported accusations of repackaging [zh]"; correction 1/2]
-<这条规则配置的英文校正 prompt，要求保留原回答语言并复用已有结果>
-
-助手：项目包含单元测试和集成测试，覆盖核心函数与主要接口。
-目前尚未覆盖并发和故障恢复场景。
-```
+截图使用个人配置的 20 次重试上限；当前默认界面为英文，内置重试上限为 2。
 
 校正作为 custom message 显示在对话里。原用户问题、已有工具结果和被中断消息的会话记录均保留，不回滚会话树。
 

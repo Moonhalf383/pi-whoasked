@@ -12,17 +12,29 @@ The interrupted reply stays visible, is marked as superseded, and is followed by
 
 Requires Pi (`@earendil-works/pi-coding-agent`) 1.4.0+ and Node.js 22.19+. Node.js 24 is recommended for running tests.
 
-Load temporarily from the repository directory:
+Install from npm:
 
 ```bash
+pi install npm:@moonhalf383/pi-whoasked
+```
+
+Restart Pi or run `/reload`. Bilingual rules are enabled out of the box.
+
+Alternatively, install from GitHub:
+
+```bash
+pi install git:github.com/Moonhalf383/pi-whoasked
+```
+
+For local development, clone the repository and load the extension temporarily:
+
+```bash
+git clone https://github.com/Moonhalf383/pi-whoasked.git
+cd pi-whoasked
 pi -e ./src/index.ts
 ```
 
-Install persistently:
-
-```bash
-pi install /path/to/whoasked
-```
+Use `pi install .` from the repository directory for a persistent local installation.
 
 ## Configuration
 
@@ -39,8 +51,10 @@ Configuration is merged in this order, with later values taking precedence:
 You can also specify a standalone file. It is applied over the built-in defaults without loading personal or project configuration:
 
 ```bash
-pi -e ./src/index.ts --whoasked-config ./whoasked.example.json
+pi --whoasked-config /path/to/whoasked.json
 ```
+
+The extension must already be installed. When loading directly from a checkout, add `-e ./src/index.ts`.
 
 No configuration file is needed to use the bilingual defaults. To keep the defaults while adjusting the retry limit, use `{ "maxRetries": 4 }`. A file containing `rules` replaces all built-in rules, including English rules; remove that field to inherit future defaults.
 
@@ -73,7 +87,7 @@ Configuration fields:
 
 Rules are checked in configuration order; the first matching rule in a snapshot wins. Match state is reset for `g`; `y` retains its sticky semantics. Patterns that match empty input are rejected, and zero-width matches encountered at runtime are skipped. Unknown fields, invalid regexes, or invalid values produce an error and disable detection. Fix the configuration and run `/whoasked reload`.
 
-For single-language overrides, use [configs/zh-CN.strict.json](configs/zh-CN.strict.json) (Chinese names and prompts) or [configs/en.strict.json](configs/en.strict.json) (English). These are subsets of the bilingual defaults, not additional detection modes:
+For single-language overrides, use [configs/zh-CN.strict.json](configs/zh-CN.strict.json) (Chinese names and prompts) or [configs/en.strict.json](configs/en.strict.json) (English). These are subsets of the bilingual defaults, not additional detection modes. From a repository checkout:
 
 ```bash
 pi -e ./src/index.ts --whoasked-config ./configs/zh-CN.strict.json
@@ -87,20 +101,9 @@ After updating the extension, run `/reload` to load the new code. `/whoasked rel
 
 ## Example
 
-```text
-User: What tests does this project have?
+![Pi interrupts a matching reply and sends a correction prompt](example.png)
 
-Assistant: The project has unit and integration tests. We cannot claim…
-[Reply interrupted]
-
-whoasked-correction:
-[Previous reply superseded; matched “Defensive evidence qualifiers [en]”; correction 1/2]
-<The rule's correction prompt>
-Answer the original question from the beginning and reuse existing tool results.
-
-Assistant: Unit and integration tests cover the core functions and main APIs.
-Concurrency and failure recovery are not yet covered.
-```
+The screenshot shows an earlier Chinese UI with a personal retry limit of 20. The current default UI is English and the built-in retry limit is 2.
 
 Corrections appear as custom messages in the conversation. The original question, existing tool results, and interrupted message history are retained; the session tree is not rolled back.
 
